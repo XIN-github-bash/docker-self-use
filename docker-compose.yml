@@ -1,0 +1,86 @@
+version: '3.5'
+networks:
+  self-use:
+    driver: "bridge"
+    ipam:
+      config:
+        - subnet: 172.16.0.0/24
+          gateway: 172.16.0.1
+
+services:
+  mysql:
+    build: ./images/mysql
+    ports:
+      - "3306:3306"
+    tty: true
+    restart: always
+    container_name: mysql
+    volumes:
+      - $PWD/config/mysql/my.cnf:/etc/mysql/my.cnf
+      - $PWD/logs/mysql:/var/log/mysql
+      - $PWD/data/mysql:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD="123456"
+    networks:
+      self-use:
+        ipv4_address: 172.16.0.2
+  nginx: 
+    build: ./images/nginx
+    ports: 
+      - "80:80"
+      - "443:443"
+    tty: true
+    restart: always
+    container_name: nginx
+    volumes:
+      - $PWD/www:/var/www
+      - $PWD/logs/nginx:/var/log/nginx
+      - $PWD/config/nginx/conf.d:/etc/nginx/conf.d
+      - $PWD/config/nginx/nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      self-use:
+        ipv4_address: 172.16.0.3
+  php:
+    build: ./images/php-fpm
+    tty: true
+    restart: always
+    container_name: php
+    volumes:
+      - $PWD/www:/var/www
+      - $PWD/logs/php:/var/log/php
+      - $PWD/config/php-fpm/php.ini:/usr/local/etc/php/php.ini
+    depends_on:
+      - nginx
+    networks:
+      self-use:
+        ipv4_address: 172.16.0.4
+  redis:
+    build: ./images/redis
+    tty: true
+    restart: always
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - $PWD/config/redis/redis.conf:/etc/redis/redis.conf
+      - $PWD/data/redis:/var/lib/redis
+      - $PWD/logs/redis:/var/log/redis
+    networks:
+      self-use:
+        ipv4_address: 172.16.0.5
+  mongo:
+    build: ./images/mongodb
+    tty: true
+    restart: always
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - $PWD/data/mongo:/data/db
+      - $PWD/data/mongo_config:/data/configdb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME="root"
+      - MONGO_INITDB_ROOT_PASSWORD="123456"
+    networks:
+      self-use:
+        ipv4_address: 172.16.0.6
